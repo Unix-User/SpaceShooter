@@ -1,0 +1,69 @@
+[gd_scene load_steps=9 format=3 uid="uid://ca62b4vebssnp"]
+
+[ext_resource type="Texture2D" uid="uid://dihi1f1lwf2vs" path="res://assets/Backgrounds/purple.png" id="1_4ywf1"]
+[ext_resource type="Script" path="res://World.gd" id="1_jvenn"]
+[ext_resource type="PackedScene" uid="uid://cvmnjm7irvic4" path="res://characters/player/player.tscn" id="2_hsy1p"]
+[ext_resource type="PackedScene" uid="uid://8a82lvcxfwie" path="res://control.tscn" id="2_jinrv"]
+[ext_resource type="PackedScene" uid="uid://c6e4edwlwajns" path="res://game_over_screen.tscn" id="3_d0tut"]
+[ext_resource type="PackedScene" uid="uid://cm381fkcaok4b" path="res://characters/enemy/enemy_spawner.tscn" id="3_esbgo"]
+[ext_resource type="Texture2D" uid="uid://ch5a3y0w6xavb" path="res://assets/Effects/star1.png" id="4_dwox6"]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_264jw"]
+particle_flag_disable_z = true
+emission_shape = 3
+emission_box_extents = Vector3(270, 1, 1)
+direction = Vector3(0, -1, 0)
+spread = 0.0
+initial_velocity_min = -1000.0
+initial_velocity_max = -1000.0
+gravity = Vector3(0, 0, 0)
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_jvenn")
+
+[node name="UiLayer" type="CanvasLayer" parent="."]
+
+[node name="Control" parent="UiLayer" instance=ExtResource("2_jinrv")]
+
+[node name="GameOverScreen" parent="UiLayer" instance=ExtResource("3_d0tut")]
+visible = false
+
+[node name="Player" parent="." instance=ExtResource("2_hsy1p")]
+light_mask = 2
+visibility_layer = 21
+position = Vector2(256, 896)
+
+[node name="EnemySpawner" parent="." instance=ExtResource("3_esbgo")]
+
+[node name="StarParticleEffect" type="GPUParticles2D" parent="."]
+visible = false
+position = Vector2(270, -50)
+process_material = SubResource("ParticleProcessMaterial_264jw")
+texture = ExtResource("4_dwox6")
+lifetime = 1.25
+preprocess = 5.0
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="."]
+position = Vector2(270, -50)
+amount = 4
+lifetime = 1.25
+preprocess = 5.0
+texture = ExtResource("4_dwox6")
+emission_shape = 3
+emission_rect_extents = Vector2(270, 1)
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="."]
+
+[node name="ParallaxLayer" type="ParallaxLayer" parent="ParallaxBackground"]
+motion_mirroring = Vector2(0, 960)
+
+[node name="Bg" type="Sprite2D" parent="ParallaxBackground/ParallaxLayer"]
+texture_repeat = 2
+texture = ExtResource("1_4ywf1")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 540, 960)
+
+[node name="WorldTimer" type="Timer" parent="."]
+
+[connection signal="spawn_laser" from="Player" to="." method="_on_player_spawn_laser"]
