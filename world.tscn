@@ -58,8 +58,6 @@ centered = false
 region_enabled = true
 region_rect = Rect2(0, 0, 540, 960)
 
-[node name="WorldTimer" type="Timer" parent="."]
-
 [node name="UiLayer" type="CanvasLayer" parent="."]
 
 [node name="Control" parent="UiLayer" instance=ExtResource("2_jinrv")]
@@ -73,7 +71,5 @@ action_down = "move_down"
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(267, 479)
-
-[node name="HTTPRequest" type="HTTPRequest" parent="."]
 
 [connection signal="spawn_laser" from="Player" to="." method="_on_player_spawn_laser"]
