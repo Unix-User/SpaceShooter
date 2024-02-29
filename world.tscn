@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://ca62b4vebssnp"]
+[gd_scene load_steps=10 format=3 uid="uid://ca62b4vebssnp"]
 
 [ext_resource type="Texture2D" uid="uid://bxtw5gwsfero6" path="res://assets/Backgrounds/purple.png" id="1_4ywf1"]
 [ext_resource type="Script" path="res://World.gd" id="1_jvenn"]
@@ -8,7 +8,6 @@
 [ext_resource type="PackedScene" uid="uid://cm381fkcaok4b" path="res://characters/enemy/Enemy_spawner.tscn" id="3_esbgo"]
 [ext_resource type="Texture2D" uid="uid://kk21wy3weat0" path="res://assets/Effects/star1.png" id="4_dwox6"]
 [ext_resource type="PackedScene" uid="uid://bulr8q8t27ogq" path="res://virtual_joystick2.tscn" id="8_656ck"]
-[ext_resource type="PackedScene" uid="uid://gu8qdw33kcyw" path="res://characters/enemy/Enemy.tscn" id="9_440wt"]
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_264jw"]
 particle_flag_disable_z = true
@@ -27,8 +26,6 @@ script = ExtResource("1_jvenn")
 light_mask = 2
 visibility_layer = 21
 position = Vector2(256, 896)
-
-[node name="HTTPRequest" type="HTTPRequest" parent="Player"]
 
 [node name="EnemySpawner" parent="." instance=ExtResource("3_esbgo")]
 
@@ -77,6 +74,6 @@ action_down = "move_down"
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(267, 479)
 
-[node name="Enemy" parent="." instance=ExtResource("9_440wt")]
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
 
 [connection signal="spawn_laser" from="Player" to="." method="_on_player_spawn_laser"]

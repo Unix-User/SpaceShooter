@@ -90,7 +90,7 @@ theme_override_font_sizes/font_size = 36
 text = "Hi-score: 0"
 horizontal_alignment = 1
 
-[node name="LineEdit" type="LineEdit" parent="Panel"]
+[node name="PlayerName" type="LineEdit" parent="Panel"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -123,4 +123,8 @@ grow_vertical = 0
 theme_override_font_sizes/font_size = 32
 text = "TENTAR NOVAMENTE"
 
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
+
+[connection signal="text_submitted" from="Panel/PlayerName" to="." method="_on_player_name_text_submitted"]
 [connection signal="pressed" from="Panel/RestartButton" to="." method="_on_restart_button_pressed"]
+[connection signal="request_completed" from="HTTPRequest" to="." method="_on_http_request_request_completed"]
