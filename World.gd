@@ -2,7 +2,8 @@ extends Node2D
 @onready var pb = $ParallaxBackground
 @onready var control = $UiLayer/Control
 @onready var game_over_screen = $UiLayer/GameOverScreen
-	
+const Enemyas = preload("res://characters/enemy/Enemy.tscn")
+
 var Laser = preload("res://projectiles/PlayerLaser.tscn")
 var score := 0:
 	set(value):

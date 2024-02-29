@@ -8,10 +8,6 @@ func _ready():
 	randomize()
 	spawn_positions = $SpawnPositions.get_children()
 
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	pass
 	
 func spawn_enemy():
 	var index = randi() % spawn_positions.size()
@@ -23,3 +19,6 @@ func spawn_enemy():
 func _on_spawn_timer_timeout():
 	spawn_enemy()
 
+@warning_ignore("unused_parameter")
+func _on_enemy_area_entered(area):
+	pass # Replace with function body.
