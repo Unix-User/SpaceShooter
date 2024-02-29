@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://d85thf43lbj3"]
+
+[ext_resource type="Script" path="res://joystick.gd" id="1_8ku7g"]
+[ext_resource type="Texture2D" uid="uid://bm30au8mjfc2f" path="res://assets/joystick/textures/joystick_base_outline.png" id="2_s7qnf"]
+[ext_resource type="Texture2D" uid="uid://dt13r06u87fib" path="res://assets/joystick/textures/joystick_tip_arrows.png" id="3_xpsib"]
+[ext_resource type="Script" path="res://knog.gd" id="4_45gjg"]
+
+[node name="Joystick" type="Node2D"]
+position = Vector2(127, 842)
+script = ExtResource("1_8ku7g")
+
+[node name="ring" type="Sprite2D" parent="."]
+texture = ExtResource("2_s7qnf")
+
+[node name="knog" type="Sprite2D" parent="."]
+texture = ExtResource("3_xpsib")
+script = ExtResource("4_45gjg")
+
+[node name="Button" type="Button" parent="."]
+offset_right = 8.0
+offset_bottom = 8.0
+
+[connection signal="button_down" from="Button" to="knog" method="_on_button_button_down"]
+[connection signal="button_up" from="Button" to="knog" method="_on_button_button_up"]
