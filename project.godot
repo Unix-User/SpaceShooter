@@ -73,6 +73,11 @@ shoot={
 ]
 }
 
+[input_devices]
+
+compatibility/legacy_just_pressed_behavior=true
+pointing/emulate_touch_from_mouse=true
+
 [layer_names]
 
 2d_physics/layer_1="env"

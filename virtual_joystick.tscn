@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://0dtjhittjjo0"]
+
+[ext_resource type="Script" path="res://assets/joystick/virtual_joystick.gd" id="1_5vc6p"]
+[ext_resource type="Texture2D" uid="uid://bm30au8mjfc2f" path="res://assets/joystick/textures/joystick_base_outline.png" id="2_ylsip"]
+[ext_resource type="Texture2D" uid="uid://dt13r06u87fib" path="res://assets/joystick/textures/joystick_tip_arrows.png" id="3_uwdu0"]
+
+[node name="VirtualJoystick" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_5vc6p")
+
+[node name="Node2D" type="Node2D" parent="."]
+
+[node name="ring" type="Sprite2D" parent="Node2D"]
+texture = ExtResource("2_ylsip")
+
+[node name="knog" type="Sprite2D" parent="Node2D"]
+texture = ExtResource("3_uwdu0")
+
+[node name="Button" type="Button" parent="Node2D"]
+offset_right = 8.0
+offset_bottom = 8.0
