@@ -4,7 +4,7 @@ extends Control
 var score
 
 func _on_restart_button_pressed():
-	get_tree().change_scene_to_file("res://world.tscn")
+	send_request('Anônimo')
 
 func set_score(value):
 	score = str(value)
@@ -12,11 +12,17 @@ func set_score(value):
 	
 func set_hi_score(value):
 	$Panel/HighScore.text = "HI-SCORE: " + str(value)
+	
+func send_request(data):
+	var body = JSON.stringify({"name": data, "score": str(score)})
+	var headers = ["Content-Type: application/json"]
+	$HTTPRequest.request("http://spaceshooter.udianix.com.br/scores", headers, HTTPClient.METHOD_POST, body)
 
 func _on_player_name_text_submitted(new_text):
-	var headers = ["Content-Type: application/x-www-form-urlencoded"]
-	var body = "name=" + new_text + "&score=" + score
-	$HTTPRequest.request("http://localhost:8080/register.php", headers, HTTPClient.METHOD_POST, body)
-
-func _on_http_request_request_completed(result, response_code, headers, body):
-	get_tree().change_scene_to_file("res://world.tscn")
+	send_request(new_text)
+	
+func _on_http_request_request_completed(_result, response_code, _headers, _body):
+	if response_code == 201:
+		get_tree().change_scene_to_file("res://world.tscn")
+	else:
+		print("Failed to submit score. Response code: ", response_code)
