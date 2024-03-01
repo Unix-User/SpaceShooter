@@ -16,7 +16,7 @@ func set_hi_score(value):
 func send_request(data):
 	var body = JSON.stringify({"name": data, "score": str(score)})
 	var headers = ["Content-Type: application/json"]
-	$HTTPRequest.request("http://spaceshooter.udianix.com.br/scores", headers, HTTPClient.METHOD_POST, body)
+	$HTTPRequest.request("https://spaceshooter.udianix.com.br/scores", headers, HTTPClient.METHOD_POST, body)
 
 func _on_player_name_text_submitted(new_text):
 	send_request(new_text)
