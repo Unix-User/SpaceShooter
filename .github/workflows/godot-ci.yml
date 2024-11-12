@@ -1,0 +1,49 @@
+name: "Godot Build"
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Game
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [windows, linux, web]
+    
+    container:
+      image: barichello/godot-ci:4.2
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+      
+      - name: Build
+        run: |
+          mkdir -v -p build/${{ matrix.platform }}
+          godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/${{ github.event.repository.name }}.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: build/${{ matrix.platform }}
+          retention-days: 1
+
+      - name: Deploy to GitHub Pages 🚀
+        if: matrix.platform == 'web' && github.ref == 'refs/heads/main'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/web
+          branch: gh-pages 
