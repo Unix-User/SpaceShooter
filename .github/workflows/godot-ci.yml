@@ -38,26 +38,20 @@ jobs:
         run: |
           apt-get update && apt-get install -y rsync
 
-      - name: Android Keystore
+      - name: Android Debug Keystore
         if: matrix.platform == 'android'
         run: |
-          echo "${{ secrets.RELEASE_KEYSTORE }}" > release.keystore.asc
-          gpg -d --passphrase "${{ secrets.KEYSTORE_PASSWORD }}" --batch release.keystore.asc > release.keystore
-          echo "${{ secrets.KEYSTORE_PASSWORD }}" > keystore_password.txt
+          apt-get update && apt-get install -y gnupg
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
 
       - name: Build
         env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          ANDROID_KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: android
+          ANDROID_KEYSTORE_ALIAS: androiddebugkey
         run: |
           mkdir -v -p build/${{ matrix.platform }}
           if [ "${{ matrix.platform }}" = "android" ]; then
-            if [ -n "$ANDROID_KEYSTORE_PASSWORD" ]; then
-              godot --headless --verbose --export-release "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
-            else
-              keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
-              godot --headless --verbose --export-debug "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
-            fi
+            godot --headless --verbose --export-debug "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
           else
             godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/${{ github.event.repository.name }}.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
           fi
