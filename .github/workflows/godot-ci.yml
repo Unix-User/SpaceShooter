@@ -13,37 +13,54 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [windows, linux, web]
+        platform: [windows, linux, web, android]
     
     container:
-      image: barichello/godot-ci:4.2
+      image: barichello/godot-ci:4.3-stable
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
+          submodules: true
 
       - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
+      - name: Web Build Configuration
+        if: matrix.platform == 'web'
+        run: |
+          apt-get update && apt-get install -y rsync
+
+      - name: Android Debug Keystore
+        if: matrix.platform == 'android'
+        run: |
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+
       - name: Build
         run: |
           mkdir -v -p build/${{ matrix.platform }}
-          godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/${{ github.event.repository.name }}.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
+          if [ "${{ matrix.platform }}" = "android" ]; then
+            godot --headless --verbose --export-release "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
+          else
+            godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/${{ github.event.repository.name }}.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}
           path: build/${{ matrix.platform }}
-          retention-days: 1
+          retention-days: 7
 
-      - name: Deploy to GitHub Pages 🚀
+      - name: Deploy to GitHub Pages
         if: matrix.platform == 'web' && github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: build/web
-          branch: gh-pages 
+          branch: gh-pages
+          clean: true
+          single-commit: true
