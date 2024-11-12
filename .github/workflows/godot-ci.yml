@@ -27,33 +27,61 @@ jobs:
 
       - name: Setup
         run: |
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+          mkdir -v -p ~/.local/share/godot/templates/
+          mv /root/.local/share/godot/templates/* ~/.local/share/godot/templates/
+          mkdir -v -p ~/.config/godot/
+          ls -l /root/.config/godot/
+          cp -r /root/.config/godot/* ~/.config/godot/
       
       - name: Web Build Configuration
         if: matrix.platform == 'web'
         run: |
           apt-get update && apt-get install -y rsync
 
-      - name: Android Debug Keystore
+      - name: Android Keystore
         if: matrix.platform == 'android'
         run: |
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          echo "${{ secrets.RELEASE_KEYSTORE }}" > release.keystore.asc
+          gpg -d --passphrase "${{ secrets.KEYSTORE_PASSWORD }}" --batch release.keystore.asc > release.keystore
+          echo "${{ secrets.KEYSTORE_PASSWORD }}" > keystore_password.txt
 
       - name: Build
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ANDROID_KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
         run: |
           mkdir -v -p build/${{ matrix.platform }}
           if [ "${{ matrix.platform }}" = "android" ]; then
-            godot --headless --verbose --export-release "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
+            if [ -n "$ANDROID_KEYSTORE_PASSWORD" ]; then
+              godot --headless --verbose --export-release "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
+            else
+              keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+              godot --headless --verbose --export-debug "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
+            fi
           else
             godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/${{ github.event.repository.name }}.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
           fi
+
+      - name: Package Windows Build
+        if: matrix.platform == 'windows'
+        run: |
+          cd build/windows
+          zip -r ../${{ github.event.repository.name }}-windows.zip .
+
+      - name: Package Linux Build
+        if: matrix.platform == 'linux'
+        run: |
+          cd build/linux
+          tar czf ../${{ github.event.repository.name }}-linux.tar.gz .
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}
-          path: build/${{ matrix.platform }}
+          path: |
+            build/${{ matrix.platform }}
+            build/${{ github.event.repository.name }}-*.zip
+            build/${{ github.event.repository.name }}-*.tar.gz
           retention-days: 7
 
       - name: Deploy to GitHub Pages
@@ -64,3 +92,17 @@ jobs:
           branch: gh-pages
           clean: true
           single-commit: true
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/${{ github.event.repository.name }}-*.zip
+            build/${{ github.event.repository.name }}-*.tar.gz
+            build/android/${{ github.event.repository.name }}.apk
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
