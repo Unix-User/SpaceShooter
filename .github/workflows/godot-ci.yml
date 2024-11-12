@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -11,6 +13,8 @@ jobs:
   build:
     name: Build Game
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         platform: [windows, linux, web, android]
@@ -51,31 +55,28 @@ jobs:
         run: |
           mkdir -v -p build/${{ matrix.platform }}
           if [ "${{ matrix.platform }}" = "android" ]; then
-            godot --headless --verbose --export-debug "Android" build/${{ matrix.platform }}/${{ github.event.repository.name }}.apk
+            godot --headless --verbose --export-debug "Android" build/android/SpaceShooter.apk
           else
-            godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/${{ github.event.repository.name }}.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
+            godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/SpaceShooter.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
           fi
 
-      - name: Package Windows Build
-        if: matrix.platform == 'windows'
+      - name: Package Builds
+        if: matrix.platform != 'web'
         run: |
-          cd build/windows
-          zip -r ../${{ github.event.repository.name }}-windows.zip .
-
-      - name: Package Linux Build
-        if: matrix.platform == 'linux'
-        run: |
-          cd build/linux
-          tar czf ../${{ github.event.repository.name }}-linux.tar.gz .
+          cd build
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            zip -r SpaceShooter-windows.zip windows/
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            tar czf SpaceShooter-linux.tar.gz linux/
+          elif [ "${{ matrix.platform }}" = "android" ]; then
+            cp android/SpaceShooter.apk SpaceShooter-android.apk
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}
-          path: |
-            build/${{ matrix.platform }}
-            build/${{ github.event.repository.name }}-*.zip
-            build/${{ github.event.repository.name }}-*.tar.gz
+          path: build
           retention-days: 7
 
       - name: Deploy to GitHub Pages
@@ -88,14 +89,14 @@ jobs:
           single-commit: true
 
       - name: Create Release
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/') && matrix.platform != 'web'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/${{ github.event.repository.name }}-*.zip
-            build/${{ github.event.repository.name }}-*.tar.gz
-            build/android/${{ github.event.repository.name }}.apk
-          draft: true
+            build/SpaceShooter-windows.zip
+            build/SpaceShooter-linux.tar.gz
+            build/SpaceShooter-android.apk
+          draft: false
           prerelease: false
           generate_release_notes: true
         env:
