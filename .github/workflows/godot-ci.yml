@@ -16,7 +16,7 @@ jobs:
         platform: [windows, linux, web, android]
     
     container:
-      image: barichello/godot-ci:4.3-stable
+      image: barichello/godot-ci:4.2.1
     
     steps:
       - name: Checkout
