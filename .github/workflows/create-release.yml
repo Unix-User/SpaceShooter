@@ -10,7 +10,86 @@ permissions:
   discussions: write
 
 jobs:
-  # Adicionando um job independente para satisfazer o linter
+  android-build:
+    name: Android Export
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+      - name: Android Build
+        run: |
+          mkdir -p build/android
+          godot --headless --verbose --export-release "Android" build/android/game.apk
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: build/android/game.apk
+
+  windows-build:
+    name: Windows Export
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+      - name: Windows Build
+        run: |
+          mkdir -p build/windows
+          godot --headless --verbose --export-release "Windows Desktop" build/windows/game.exe
+      - name: Create ZIP
+        run: |
+          cd build/windows
+          zip -r game-windows.zip ./*
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: build/windows/game-windows.zip
+
+  linux-build:
+    name: Linux Export
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+      - name: Linux Build
+        run: |
+          mkdir -p build/linux
+          godot --headless --verbose --export-release "Linux/X11" build/linux/game.x86_64
+      - name: Create ZIP
+        run: |
+          cd build/linux
+          zip -r game-linux.zip ./*
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: build/linux/game-linux.zip
+
   verify:
     runs-on: ubuntu-latest
     steps:
