@@ -1,117 +1,38 @@
-# Workflow para automatizar a build do jogo Godot
-name: "Godot Build"
+name: "Godot CI/CD"
 
-# Define quando o workflow será executado
 on:
   push:
-    branches:
-      - main    # Executa quando há push na branch main
-    tags:
-      - 'v*'    # Executa quando uma tag começando com 'v' é criada
+    branches: [ "main", "master" ]
   pull_request:
-    branches:
-      - main    # Executa quando há pull request para a branch main
+    branches: [ "main", "master" ]
 
 jobs:
   build:
-    name: Build Game
-    runs-on: ubuntu-latest    # Roda em ambiente Ubuntu
-    permissions:
-      contents: write         # Permissão para escrever no repositório
-    strategy:
-      matrix:
-        platform: [android] # Define apenas Android como plataforma de build
-    
+    name: Build
+    runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:mono-4.2.1    # Usa imagem com suporte a Mono/C# mais recente
+      image: barichello/godot-ci:4.2.1
     
     steps:
-      # Faz checkout do código
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true          # Suporte a Git LFS
-          submodules: true   # Clona submódulos
+          lfs: true
 
-      # Configura o ambiente Godot e .NET SDK
-      - name: Setup
-        run: |
-          mkdir -v -p ~/.local/share/godot/templates/
-          mv /root/.local/share/godot/templates/* ~/.local/share/godot/templates/ || true
-          mkdir -v -p ~/.config/godot/
-          # Instala .NET SDK
-          wget https://dot.net/v1/dotnet-install.sh
-          chmod +x dotnet-install.sh
-          ./dotnet-install.sh --channel 6.0
-          export DOTNET_ROOT=$HOME/.dotnet
-          export PATH=$PATH:$DOTNET_ROOT
-          # Configura o ambiente .NET
-          ln -s $HOME/.dotnet/host/fxr/$(ls $HOME/.dotnet/host/fxr)/ /usr/share/dotnet/host/fxr
-        continue-on-error: true
-
-      # Processo de build para Android sem keystore
       - name: Build
         run: |
-          mkdir -v -p build/android
-          godot --headless --verbose --export-debug "Android" build/android/SpaceShooter.apk
-        env:
-          DOTNET_ROOT: ${{ env.HOME }}/.dotnet
+          mkdir -p build/web
+          godot --headless --export-release "Web" build/web/index.html
 
-      # Empacota o build Android com verificação
-      - name: Package Build
-        run: |
-          cd build
-          cp android/SpaceShooter.apk SpaceShooter-android.apk
-          ls -la
-          # Verifica se o APK foi gerado corretamente
-          if [ ! -f SpaceShooter-android.apk ]; then
-            echo "Erro: APK não foi gerado"
-            exit 1
-          fi
-
-      # Upload do artefato com compressão
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: android
-          path: build
-          retention-days: 7
-          compression-level: 9
+          name: web-build
+          path: build/web
 
-  # Job para criar release quando uma tag é criada
-  release:
-    name: Create Release
-    needs: build    # Depende do job build
-    if: startsWith(github.ref, 'refs/tags/')    # Só executa quando há uma tag
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      # Download de todos os artefatos
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v4
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: artifacts
-          merge-multiple: true
-
-      # Mostra estrutura dos arquivos
-      - name: Display Structure
-        run: ls -R artifacts/
-
-      # Cria release no GitHub com verificações adicionais
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            artifacts/SpaceShooter-android.apk
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          body: |
-            ## Android Release
-            - Versão: ${{ github.ref_name }}
-            - Data: ${{ github.event.head_commit.timestamp }}
-            
-            Por favor, teste o APK antes de distribuir.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          folder: build/web
+          branch: gh-pages
