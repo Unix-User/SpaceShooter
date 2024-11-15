@@ -95,14 +95,6 @@ jobs:
         with:
           name: web-build
           path: build/web
-      - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: build/web
-          branch: gh-pages
-          clean: true
-          commit-message: "ci: Deploy GitHub Page | ${{ env.EXPORT_NAME }}:${{ github.job }}"
 
   export-android:
     name: Android Export
@@ -124,9 +116,16 @@ jobs:
         with:
           path: .godot/imported/
           key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
+      - name: Create required directories
+        run: |
+          mkdir -v -p .godot/editor/
+          mkdir -v -p build/android
+      - name: Set correct permissions
+        run: |
+          chmod -R 777 .godot/
+          chmod -R 777 build/
       - name: Android Debug Build
         run: |
-          mkdir -v -p build/android
           cd ${PROJECT_PATH}
           godot --headless --verbose --export-debug "Android" build/android/$EXPORT_NAME-debug.apk
       - name: Upload Android Artifact
