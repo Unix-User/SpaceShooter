@@ -12,8 +12,8 @@ env:
   PROJECT_PATH: ${{ secrets.PROJECT_PATH }}
 
 jobs:
-  export-web:
-    name: Web Export
+  import-assets:
+    name: Import Assets
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.2.1
@@ -26,6 +26,36 @@ jobs:
         run: |
           mkdir -v -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+      - name: Import Assets
+        run: |
+          cd ${PROJECT_PATH}
+          godot --headless --verbose --editor --quit
+      - name: Cache imported assets
+        uses: actions/cache@v3
+        with:
+          path: .godot/imported/
+          key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
+
+  export-web:
+    name: Web Export
+    needs: import-assets
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.2.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+      - name: Restore cached assets
+        uses: actions/cache@v3
+        with:
+          path: .godot/imported/
+          key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
       - name: Web Build
         run: |
           mkdir -v -p build/web
@@ -60,10 +90,10 @@ jobs:
             ]
           }
           EOL
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: web
+          name: web-build
           path: build/web
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -73,3 +103,34 @@ jobs:
           branch: gh-pages
           clean: true
           commit-message: "ci: Deploy GitHub Page | ${{ env.EXPORT_NAME }}:${{ github.job }}"
+
+  export-android:
+    name: Android Export
+    needs: import-assets
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.2.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+      - name: Restore cached assets
+        uses: actions/cache@v3
+        with:
+          path: .godot/imported/
+          key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
+      - name: Android Debug Build
+        run: |
+          mkdir -v -p build/android
+          cd ${PROJECT_PATH}
+          godot --headless --verbose --export-debug "Android" build/android/$EXPORT_NAME-debug.apk
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-debug
+          path: build/android
