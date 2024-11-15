@@ -1,12 +1,12 @@
 [gd_scene load_steps=10 format=3 uid="uid://ca62b4vebssnp"]
 
-[ext_resource type="Texture2D" uid="uid://bxtw5gwsfero6" path="res://assets/Backgrounds/purple.png" id="1_4ywf1"]
+[ext_resource type="Texture2D" uid="uid://uxiyl2itnjij" path="res://assets/Backgrounds/purple.png" id="1_4ywf1"]
 [ext_resource type="Script" path="res://World.gd" id="1_jvenn"]
 [ext_resource type="PackedScene" uid="uid://cvmnjm7irvic4" path="res://characters/player/player.tscn" id="2_hsy1p"]
 [ext_resource type="PackedScene" uid="uid://8a82lvcxfwie" path="res://control.tscn" id="2_jinrv"]
 [ext_resource type="PackedScene" uid="uid://c6e4edwlwajns" path="res://game_over_screen.tscn" id="3_d0tut"]
 [ext_resource type="PackedScene" uid="uid://cm381fkcaok4b" path="res://characters/enemy/Enemy_spawner.tscn" id="3_esbgo"]
-[ext_resource type="Texture2D" uid="uid://kk21wy3weat0" path="res://assets/Effects/star1.png" id="4_dwox6"]
+[ext_resource type="Texture2D" uid="uid://cm3iloq4w0ewr" path="res://assets/Effects/star1.png" id="4_dwox6"]
 [ext_resource type="PackedScene" uid="uid://bulr8q8t27ogq" path="res://virtual_joystick2.tscn" id="8_656ck"]
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_264jw"]

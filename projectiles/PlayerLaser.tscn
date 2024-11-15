@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://t80qvrio456g"]
 
 [ext_resource type="Script" path="res://projectiles/PlayerLaser.gd" id="1_2mw7s"]
-[ext_resource type="Texture2D" uid="uid://dmsbpv0bgwwt2" path="res://assets/Lasers/laserBlue01.png" id="2_n17am"]
+[ext_resource type="Texture2D" uid="uid://dmpdic1ujvseb" path="res://assets/Lasers/laserBlue01.png" id="2_n17am"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_yx2u0"]
 radius = 5.0

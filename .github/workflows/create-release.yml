@@ -48,26 +48,41 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
+      - name: Setup Keystore
+        if: matrix.platform == 'android'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+          echo "keystore/release=android.keystore" >> export_presets.cfg
+          echo "keystore/release_user=${{ secrets.ANDROID_KEYSTORE_USER }}" >> export_presets.cfg
+          echo "keystore/release_password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> export_presets.cfg
+          
       - name: Android Setup
         if: matrix.platform == 'android'
         run: |
-          apt-get update && apt-get install -y openjdk-11-jdk-headless
+          apt-get update && apt-get install -y --no-install-recommends \
+            openjdk-11-jdk-headless \
+            wget \
+            unzip \
+            android-sdk
+          
+          export ANDROID_HOME=/usr/lib/android-sdk
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+          
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          unzip commandlinetools-linux-*_latest.zip -d $ANDROID_HOME/cmdline-tools
+          mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          
           export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
           export PATH=$PATH:$JAVA_HOME/bin
       
-      - name: Verify Export Presets
-        run: |
-          if [ ! -f "export_presets.cfg" ]; then
-            echo "Error: export_presets.cfg not found!"
-            exit 1
-          fi
-          echo "Found export_presets.cfg"
-          cat export_presets.cfg | grep "name="
-          
       - name: Build
         run: |
           mkdir -p build/${{ matrix.platform }}
-          godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }} || exit 1
+          godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
       
       - name: Create ZIP
         if: matrix.needs_zip && success()
@@ -83,15 +98,10 @@ jobs:
           path: ${{ matrix.needs_zip && format('build/{0}/game-{0}.zip', matrix.platform) || matrix.artifact_path }}
           retention-days: 7
 
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Verification step"
-  
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [verify, build]
+    needs: build
     if: success()
     
     steps:
@@ -100,32 +110,11 @@ jobs:
         with:
           path: builds
           
-      - name: List Downloads
-        run: |
-          ls -R builds/
-          
-      - name: Verify Artifacts
-        run: |
-          if [ ! -f "builds/android-build/game.apk" ]; then
-            echo "Error: Android build missing"
-            exit 1
-          fi
-          if [ ! -f "builds/windows-build/game-windows.zip" ]; then
-            echo "Error: Windows build missing"
-            exit 1
-          fi
-          if [ ! -f "builds/linux-build/game-linux.zip" ]; then
-            echo "Error: Linux build missing"
-            exit 1
-          fi
-          
       - name: Generate Changelog
         run: |
-          echo "# 🎮 Game Release ${{ github.ref_name }}" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
           echo "## 📥 Downloads" >> CHANGELOG.md
           echo "* 📱 Android: game.apk" >> CHANGELOG.md
-          echo "* 🪟 Windows: game-windows.zip" >> CHANGELOG.md
+          echo "* 🖥 Windows: game-windows.zip" >> CHANGELOG.md
           echo "* 🐧 Linux: game-linux.zip" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "## 📝 Notas da Versão" >> CHANGELOG.md
@@ -146,3 +135,10 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f android.keystore || true
+          rm -rf ~/.local/share/godot || true
+          rm -rf ~/.config/godot || true
