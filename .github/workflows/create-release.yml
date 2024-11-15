@@ -22,12 +22,12 @@ jobs:
             needs_zip: false
             extra_setup: true
           - platform: windows
-            export_preset: "Windows"
+            export_preset: "Windows Desktop"
             artifact_path: build/windows/game.exe
             needs_zip: true
             extra_setup: false
           - platform: linux
-            export_preset: "Linux"
+            export_preset: "Linux/X11"
             artifact_path: build/linux/game.x86_64
             needs_zip: true
             extra_setup: false
@@ -73,7 +73,7 @@ jobs:
         if: matrix.needs_zip && success()
         run: |
           cd build/${{ matrix.platform }}
-          zip -r game-${{ matrix.platform }}.zip game* ./*.dll ./*.pck ./*.so* ./*.x86_64
+          zip -r game-${{ matrix.platform }}.zip *
       
       - name: Upload Artifact
         if: success()
