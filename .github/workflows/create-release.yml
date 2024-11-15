@@ -1,0 +1,50 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [android-build, windows-build, linux-build]
+    
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: builds
+          
+      - name: Generate Changelog
+        run: |
+          echo "# 🎮 Game Release ${{ github.ref_name }}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## 📥 Downloads" >> CHANGELOG.md
+          echo "* 📱 Android: game.apk" >> CHANGELOG.md
+          echo "* 🪟 Windows: game-windows.zip" >> CHANGELOG.md
+          echo "* 🐧 Linux: game-linux.zip" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## 📝 Notas da Versão" >> CHANGELOG.md
+          echo "### ✨ Novidades" >> CHANGELOG.md
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            builds/android-build/game.apk
+            builds/windows-build/game-windows.zip
+            builds/linux-build/game-linux.zip
+          name: "🎮 Game Release ${{ github.ref_name }}"
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

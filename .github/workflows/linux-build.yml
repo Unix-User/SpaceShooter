@@ -1,4 +1,4 @@
-name: Android Build
+name: Linux Build
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Android
+    name: Build Linux
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.2.1
@@ -40,12 +40,17 @@ jobs:
       
       - name: Build
         run: |
-          mkdir -p build/android
-          godot --headless --verbose --export-release "Android" build/android/game.apk
+          mkdir -p build/linux
+          godot --headless --verbose --export-release "Linux/X11" build/linux/game.x86_64
           
-      - name: Upload Android Build
+      - name: Create Linux Archive
+        run: |
+          cd build/linux
+          zip -r game-linux.zip game.x86_64
+          
+      - name: Upload Linux Build
         uses: actions/upload-artifact@v4
         with:
-          name: android-build
-          path: build/android/game.apk
+          name: linux-build
+          path: build/linux/game-linux.zip
           retention-days: 7

@@ -1,4 +1,4 @@
-name: Android Build
+name: Windows Build
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Android
+    name: Build Windows
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.2.1
@@ -40,12 +40,14 @@ jobs:
       
       - name: Build
         run: |
-          mkdir -p build/android
-          godot --headless --verbose --export-release "Android" build/android/game.apk
+          mkdir -p build/windows
+          godot --headless --verbose --export-release "Windows Desktop" build/windows/game.exe
+          cd build/windows
+          zip -r game-windows.zip game.exe
           
-      - name: Upload Android Build
+      - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
-          name: android-build
-          path: build/android/game.apk
+          name: windows-build
+          path: build/windows/game-windows.zip
           retention-days: 7
