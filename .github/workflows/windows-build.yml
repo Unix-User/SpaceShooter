@@ -1,53 +1,39 @@
 name: Windows Build
-
 on:
   push:
-    branches: [ main ]
     tags:
       - "v*.*.*"
-  pull_request:
-    branches: [ main ]
-
-permissions:
-  contents: write
 
 jobs:
-  build:
-    name: Build Windows
+  windows-build:
+    name: Windows Export
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.2.1
+      image: barichello/godot-ci:4.2
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           lfs: true
-      
-      - name: Setup Export Templates
+
+      - name: Setup
         run: |
-          mkdir -p ~/.local/share/godot/export_templates
+          mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
-      - name: Cache Godot files
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.local/share/godot/
-            ~/.cache/godot/
-          key: ${{ runner.os }}-godot-${{ hashFiles('**/*.tscn', '**/*.gd') }}
-          restore-keys: |
-            ${{ runner.os }}-godot-
-      
-      - name: Build
+      - name: Windows Build
         run: |
           mkdir -p build/windows
           godot --headless --verbose --export-release "Windows Desktop" build/windows/game.exe
+
+      - name: Create ZIP
+        run: |
           cd build/windows
-          zip -r game-windows.zip game.exe
-          
-      - name: Upload Windows Build
+          zip -r game-windows.zip ./*
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: build/windows/game-windows.zip
-          retention-days: 7

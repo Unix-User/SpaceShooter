@@ -1,56 +1,39 @@
 name: Linux Build
-
 on:
   push:
-    branches: [ main ]
     tags:
       - "v*.*.*"
-  pull_request:
-    branches: [ main ]
-
-permissions:
-  contents: write
 
 jobs:
-  build:
-    name: Build Linux
+  linux-build:
+    name: Linux Export
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.2.1
+      image: barichello/godot-ci:4.2
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           lfs: true
-      
-      - name: Setup Export Templates
+
+      - name: Setup
         run: |
-          mkdir -p ~/.local/share/godot/export_templates
+          mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
-      - name: Cache Godot files
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.local/share/godot/
-            ~/.cache/godot/
-          key: ${{ runner.os }}-godot-${{ hashFiles('**/*.tscn', '**/*.gd') }}
-          restore-keys: |
-            ${{ runner.os }}-godot-
-      
-      - name: Build
+      - name: Linux Build
         run: |
           mkdir -p build/linux
           godot --headless --verbose --export-release "Linux/X11" build/linux/game.x86_64
-          
-      - name: Create Linux Archive
+
+      - name: Create ZIP
         run: |
           cd build/linux
-          zip -r game-linux.zip game.x86_64
-          
-      - name: Upload Linux Build
+          zip -r game-linux.zip ./*
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: build/linux/game-linux.zip
-          retention-days: 7

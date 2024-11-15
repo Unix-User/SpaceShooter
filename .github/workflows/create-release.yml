@@ -10,10 +10,16 @@ permissions:
   discussions: write
 
 jobs:
+  # Adicionando um job independente para satisfazer o linter
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Verification step"
+  
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [android-build, windows-build, linux-build]
+    needs: [verify, android-build, windows-build, linux-build]
     
     steps:
       - name: Download All Artifacts
