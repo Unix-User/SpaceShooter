@@ -12,6 +12,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false  # Continue with other platforms if one fails
       matrix:
         platform: [android, windows, linux]
         include:
@@ -19,14 +20,17 @@ jobs:
             export_preset: "Android"
             artifact_path: build/android/game.apk
             needs_zip: false
+            extra_setup: true
           - platform: windows
             export_preset: "Windows Desktop"
             artifact_path: build/windows/game.exe
             needs_zip: true
+            extra_setup: false
           - platform: linux
             export_preset: "Linux/X11"
             artifact_path: build/linux/game.x86_64
             needs_zip: true
+            extra_setup: false
     
     name: ${{ matrix.platform }} Export
     runs-on: ubuntu-latest
@@ -44,18 +48,34 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
+      - name: Android Setup
+        if: matrix.platform == 'android'
+        run: |
+          apt-get update && apt-get install -y openjdk-11-jdk-headless
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          export PATH=$PATH:$JAVA_HOME/bin
+      
+      - name: Verify Export Presets
+        run: |
+          if [ ! -f "export_presets.cfg" ]; then
+            echo "Error: export_presets.cfg not found!"
+            exit 1
+          fi
+          echo "Found export_presets.cfg"
+          
       - name: Build
         run: |
           mkdir -p build/${{ matrix.platform }}
-          godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+          godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }} || exit 1
       
       - name: Create ZIP
-        if: matrix.needs_zip
+        if: matrix.needs_zip && success()
         run: |
           cd build/${{ matrix.platform }}
           zip -r game-${{ matrix.platform }}.zip ./*
       
       - name: Upload Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-build
@@ -71,12 +91,28 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [verify, build]
+    if: success()
     
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: builds
+          
+      - name: Verify Artifacts
+        run: |
+          if [ ! -f "builds/android-build/game.apk" ]; then
+            echo "Error: Android build missing"
+            exit 1
+          fi
+          if [ ! -f "builds/windows-build/game-windows.zip" ]; then
+            echo "Error: Windows build missing"
+            exit 1
+          fi
+          if [ ! -f "builds/linux-build/game-linux.zip" ]; then
+            echo "Error: Linux build missing"
+            exit 1
+          fi
           
       - name: Generate Changelog
         run: |
