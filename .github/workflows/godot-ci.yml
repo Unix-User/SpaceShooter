@@ -1,34 +1,39 @@
+# Workflow para automatizar a build do jogo Godot
 name: "Godot Build"
+
+# Define quando o workflow será executado
 on:
   push:
     branches:
-      - main
+      - main    # Executa quando há push na branch main
     tags:
-      - 'v*'
+      - 'v*'    # Executa quando uma tag começando com 'v' é criada
   pull_request:
     branches:
-      - main
+      - main    # Executa quando há pull request para a branch main
 
 jobs:
   build:
     name: Build Game
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest    # Roda em ambiente Ubuntu
     permissions:
-      contents: write
+      contents: write         # Permissão para escrever no repositório
     strategy:
       matrix:
-        platform: [windows, linux, web, android]
+        platform: [android] # Define apenas Android como plataforma de build
     
     container:
-      image: barichello/godot-ci:4.2
+      image: barichello/godot-ci:mono-4.2.1    # Usa imagem com suporte a Mono/C# mais recente
     
     steps:
+      # Faz checkout do código
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
-          submodules: true
+          lfs: true          # Suporte a Git LFS
+          submodules: true   # Clona submódulos
 
+      # Configura o ambiente Godot
       - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/templates/
@@ -37,67 +42,67 @@ jobs:
           ls -l /root/.config/godot/
           cp -r /root/.config/godot/* ~/.config/godot/
       
-      - name: Web Build Configuration
-        if: matrix.platform == 'web'
-        run: |
-          apt-get update && apt-get install -y rsync
-
-      - name: Android Debug Keystore
-        if: matrix.platform == 'android'
-        run: |
-          apt-get update && apt-get install -y gnupg
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
-
+      # Processo de build para Android sem keystore
       - name: Build
-        env:
-          ANDROID_KEYSTORE_PASSWORD: android
-          ANDROID_KEYSTORE_ALIAS: androiddebugkey
         run: |
-          mkdir -v -p build/${{ matrix.platform }}
-          if [ "${{ matrix.platform }}" = "android" ]; then
-            godot --headless --verbose --export-debug "Android" build/android/SpaceShooter.apk
-          else
-            godot --headless --verbose --export-release "${{ matrix.platform }}" build/${{ matrix.platform }}/SpaceShooter.${{ matrix.platform == 'windows' && 'exe' || matrix.platform == 'web' && 'html' || 'x86_64' }}
-          fi
+          mkdir -v -p build/android
+          godot --headless --verbose --export-debug "Android" build/android/SpaceShooter.apk
 
-      - name: Package Builds
-        if: matrix.platform != 'web'
+      # Empacota o build Android com verificação
+      - name: Package Build
         run: |
           cd build
-          if [ "${{ matrix.platform }}" = "windows" ]; then
-            zip -r SpaceShooter-windows.zip windows/
-          elif [ "${{ matrix.platform }}" = "linux" ]; then
-            tar czf SpaceShooter-linux.tar.gz linux/
-          elif [ "${{ matrix.platform }}" = "android" ]; then
-            cp android/SpaceShooter.apk SpaceShooter-android.apk
+          cp android/SpaceShooter.apk SpaceShooter-android.apk
+          ls -la
+          # Verifica se o APK foi gerado corretamente
+          if [ ! -f SpaceShooter-android.apk ]; then
+            echo "Erro: APK não foi gerado"
+            exit 1
           fi
 
+      # Upload do artefato com compressão
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}
+          name: android
           path: build
           retention-days: 7
+          compression-level: 9
 
-      - name: Deploy to GitHub Pages
-        if: matrix.platform == 'web' && github.ref == 'refs/heads/main'
-        uses: JamesIves/github-pages-deploy-action@v4
+  # Job para criar release quando uma tag é criada
+  release:
+    name: Create Release
+    needs: build    # Depende do job build
+    if: startsWith(github.ref, 'refs/tags/')    # Só executa quando há uma tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Download de todos os artefatos
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
         with:
-          folder: build/web
-          branch: gh-pages
-          clean: true
-          single-commit: true
+          path: artifacts
+          merge-multiple: true
 
+      # Mostra estrutura dos arquivos
+      - name: Display Structure
+        run: ls -R artifacts/
+
+      # Cria release no GitHub com verificações adicionais
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/') && matrix.platform != 'web'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/SpaceShooter-windows.zip
-            build/SpaceShooter-linux.tar.gz
-            build/SpaceShooter-android.apk
+            artifacts/SpaceShooter-android.apk
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## Android Release
+            - Versão: ${{ github.ref_name }}
+            - Data: ${{ github.event.head_commit.timestamp }}
+            
+            Por favor, teste o APK antes de distribuir.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
