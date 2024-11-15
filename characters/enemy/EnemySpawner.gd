@@ -1,7 +1,10 @@
 extends Node2D
 
 var spawn_positions = null
-var Enemy = preload("res://characters/enemy/Enemy.tscn")
+#preload("res://characters/enemy/Enemy.tscn")
+
+# Instead, you can load the resource dynamically:
+var enemy_scene = load("res://characters/enemy/Enemy.tscn")
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -11,7 +14,7 @@ func _ready():
 	
 func spawn_enemy():
 	var index = randi() % spawn_positions.size()
-	var enemy = Enemy.instantiate()
+	var enemy = enemy_scene.instantiate()
 	enemy.global_position = spawn_positions[index].global_position
 	enemy.connect("enemy_died", Callable(get_tree().current_scene, "_on_enemy_died"))
 	add_child(enemy)

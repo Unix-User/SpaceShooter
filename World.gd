@@ -2,7 +2,12 @@ extends Node2D
 @onready var pb = $ParallaxBackground
 @onready var control = $UiLayer/Control
 @onready var game_over_screen = $UiLayer/GameOverScreen
-const Enemyas = preload("res://characters/enemy/Enemy.tscn")
+
+# Comment out or update the preload line
+#preload("res://characters/enemy/Enemy.tscn")
+
+# Instead, you can load the resource dynamically:
+var enemy_scene = load("res://characters/enemy/Enemy.tscn")
 
 var Laser = preload("res://projectiles/PlayerLaser.tscn")
 var score := 0:
