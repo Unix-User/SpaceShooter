@@ -1,135 +1,40 @@
-name: "Godot CI/CD"
-
+name: Web Build
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main", "master" ]
-
-env:
-  GODOT_VERSION: 4.2.1
-  EXPORT_NAME: ${{ github.event.repository.name }}
-  PROJECT_PATH: ${{ secrets.PROJECT_PATH }}
+    branches: [ main ]
 
 jobs:
-  import-assets:
-    name: Import Assets
-    runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:4.2.1
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-      - name: Setup
-        run: |
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-      - name: Import Assets
-        run: |
-          cd ${PROJECT_PATH}
-          godot --headless --verbose --editor --quit
-      - name: Cache imported assets
-        uses: actions/cache@v3
-        with:
-          path: .godot/imported/
-          key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
-
-  export-web:
+  web-build:
     name: Web Export
-    needs: import-assets
     runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:4.2.1
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - name: Setup
-        run: |
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-      - name: Restore cached assets
-        uses: actions/cache@v3
+          
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v1
         with:
-          path: .godot/imported/
-          key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
-      - name: Web Build
+          version: 4.2.1
+          use-dotnet: false
+      
+      - name: Build
         run: |
-          mkdir -v -p build/web
-          cd ${PROJECT_PATH}
-          godot --headless --verbose --export-release "Web" build/web/index.html
-      - name: Create Platform Configs
-        run: |
-          # Create .htaccess for GitHub Pages
-          cat > build/web/.htaccess << 'EOL'
-          Header set Cross-Origin-Embedder-Policy "require-corp"
-          Header set Cross-Origin-Opener-Policy "same-origin"
-          Header set Access-Control-Allow-Origin "*"
-          EOL
-
-          # Create vercel.json
-          cat > build/web/vercel.json << 'EOL'
-          {
-            "headers": [
-              {
-                "source": "/(.*)",
-                "headers": [
-                  {
-                    "key": "Cross-Origin-Embedder-Policy",
-                    "value": "require-corp"
-                  },
-                  {
-                    "key": "Cross-Origin-Opener-Policy",
-                    "value": "same-origin"
-                  }
-                ]
-              }
-            ]
-          }
-          EOL
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+          mkdir -p build/web
+          godot --headless --export-release "Web" build/web/index.html
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: web-build
           path: build/web
-
-  export-android:
-    name: Android Export
-    needs: import-assets
-    runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:4.2.1
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+          retention-days: 14
+          
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          lfs: true
-      - name: Setup
-        run: |
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-      - name: Restore cached assets
-        uses: actions/cache@v3
-        with:
-          path: .godot/imported/
-          key: import-assets-${{ runner.os }}-${{ hashFiles('**/*.import') }}
-      - name: Create required directories
-        run: |
-          mkdir -v -p .godot/editor/
-          mkdir -v -p build/android
-      - name: Set correct permissions
-        run: |
-          chmod -R 777 .godot/
-          chmod -R 777 build/
-      - name: Android Debug Build
-        run: |
-          cd ${PROJECT_PATH}
-          godot --headless --verbose --export-debug "Android" build/android/$EXPORT_NAME-debug.apk
-      - name: Upload Android Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: android-debug
-          path: build/android
+          folder: build/web
+          clean: true
