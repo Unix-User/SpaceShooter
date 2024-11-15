@@ -19,12 +19,23 @@ jobs:
           java-version: '17'
           cache: 'gradle'
           
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v1
         with:
           version: 4.2.1
           use-dotnet: false
+          install-templates: true
       
+      - name: Download Android Build Template
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/4.2.1.stable
+          wget https://github.com/godotengine/godot/releases/download/4.2.1-stable/Godot_v4.2.1-stable_export_templates.tpz
+          unzip Godot_v4.2.1-stable_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/4.2.1.stable/
+          
       - name: Build
         run: |
           mkdir -p build/android
