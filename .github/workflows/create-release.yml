@@ -66,6 +66,20 @@ jobs:
               echo "keystore/release_user=${{ secrets.ANDROID_KEYSTORE_USER }}"
               echo "keystore/release_password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
             } >> export_presets.cfg
+          else
+            # Create debug keystore
+            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+              -keypass android -keystore debug.keystore \
+              -storepass android -dname "CN=Android Debug,O=Android,C=US" \
+              -validity 9999 \
+              -deststoretype pkcs12
+            
+            # Configure debug keystore
+            {
+              echo "keystore/debug=debug.keystore"
+              echo "keystore/debug_user=androiddebugkey"
+              echo "keystore/debug_password=android"
+            } >> export_presets.cfg
           fi
           
       - name: 📱 Setup Android SDK
