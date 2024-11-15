@@ -33,13 +33,11 @@ jobs:
           godot --headless --verbose --export-release "Web" build/web/index.html
       - name: Create Platform Configs
         run: |
-          # Create netlify.toml
-          cat > build/web/netlify.toml << 'EOL'
-          [[headers]]
-            for = "/*"
-            [headers.values]
-              Cross-Origin-Embedder-Policy = "require-corp"
-              Cross-Origin-Opener-Policy = "same-origin"
+          # Create .htaccess for GitHub Pages
+          cat > build/web/.htaccess << 'EOL'
+          Header set Cross-Origin-Embedder-Policy "require-corp"
+          Header set Cross-Origin-Opener-Policy "same-origin"
+          Header set Access-Control-Allow-Origin "*"
           EOL
 
           # Create vercel.json
