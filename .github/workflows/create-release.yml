@@ -17,12 +17,12 @@ jobs:
         platform: [android, windows, linux]
         include:
           - platform: android
-            export_preset: "Android"
+            export_preset: "Android (Release)"
             artifact_path: build/android/game.apk
             needs_zip: false
             extra_setup: true
           - platform: windows
-            export_preset: "Windows Desktop"
+            export_preset: "Windows Desktop (Release)"
             artifact_path: build/windows/game.exe
             needs_zip: true
             extra_setup: false
@@ -30,7 +30,7 @@ jobs:
             extra_files: "*.dll,*.pck"
             compress_level: 9
           - platform: linux
-            export_preset: "Linux/X11"
+            export_preset: "Linux/X11 (Release)"
             artifact_path: build/linux/game.x86_64
             needs_zip: true
             extra_setup: false
