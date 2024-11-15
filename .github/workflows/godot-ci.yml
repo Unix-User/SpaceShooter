@@ -45,6 +45,8 @@ jobs:
           ./dotnet-install.sh --channel 6.0
           export DOTNET_ROOT=$HOME/.dotnet
           export PATH=$PATH:$DOTNET_ROOT
+          # Configura o ambiente .NET
+          ln -s $HOME/.dotnet/host/fxr/$(ls $HOME/.dotnet/host/fxr)/ /usr/share/dotnet/host/fxr
         continue-on-error: true
 
       # Processo de build para Android sem keystore
