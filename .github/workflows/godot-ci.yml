@@ -37,11 +37,10 @@ jobs:
       - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/templates/
-          mv /root/.local/share/godot/templates/* ~/.local/share/godot/templates/
+          mv /root/.local/share/godot/templates/* ~/.local/share/godot/templates/ || true
           mkdir -v -p ~/.config/godot/
-          ls -l /root/.config/godot/
-          cp -r /root/.config/godot/* ~/.config/godot/
-      
+        continue-on-error: true
+
       # Processo de build para Android sem keystore
       - name: Build
         run: |
