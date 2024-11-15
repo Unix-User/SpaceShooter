@@ -22,6 +22,7 @@ jobs:
           - platform: windows
             export_preset: "Windows Desktop"
             artifact_path: build/windows/game.exe
+            godot_export_type: --export-release
           - platform: linux
             export_preset: "Linux/X11"
             artifact_path: build/linux/game.x86_64
@@ -30,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.2
+      options: --user root
     
     steps:
       - name: 📥 Checkout Repository
@@ -52,14 +54,17 @@ jobs:
           if [ "${{ matrix.platform }}" = "android" ]; then
             # Criar keystore para debug
             keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-              -keypass android -keystore debug.keystore \
+              -keypass android -keystore android.keystore \
               -storepass android -dname "CN=Android Debug,O=Android,C=US" \
               -validity 9999 -deststoretype pkcs12
 
-            # Configurar keystore
-            echo "keystore/debug=debug.keystore" >> export_presets.cfg
-            echo "keystore/debug_user=androiddebugkey" >> export_presets.cfg
-            echo "keystore/debug_password=android" >> export_presets.cfg
+            # Configurar keystore no export_presets.cfg
+            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
+            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
+            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
+            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release=.*|keystore/release="res://android.keystore"|' export_presets.cfg
+            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_user=.*|keystore/release_user="androiddebugkey"|' export_presets.cfg
+            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_password=.*|keystore/release_password="android"|' export_presets.cfg
 
             # Setup Android SDK
             apt-get update && apt-get install -y --no-install-recommends \
@@ -84,9 +89,13 @@ jobs:
         run: |
           case "${{ matrix.platform }}" in
             "android")
-              godot --headless --verbose --export-debug "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+              godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
               ;;
-            "windows"|"linux")
+            "windows")
+              mkdir -p "$(dirname ${{ matrix.artifact_path }})"
+              godot --headless --verbose ${{ matrix.godot_export_type }} "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+              ;;
+            "linux")
               godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
               [ "${{ matrix.platform }}" = "linux" ] && chmod 755 ${{ matrix.artifact_path }}
               ;;
@@ -98,7 +107,13 @@ jobs:
           cd build/${{ matrix.platform }}
           case "${{ matrix.platform }}" in
             "windows")
-              zip -9 -r game-windows.zip game.exe *.dll *.pck
+              ls -la
+              if [ -f "game.exe" ]; then
+                zip -9 -r game-windows.zip game.exe *.dll *.pck || echo "Warning: Some files might be missing"
+              else
+                echo "Error: game.exe not found"
+                exit 1
+              fi
               ;;
             "linux")
               zip -9 -r game-linux.zip game.x86_64 *.pck
