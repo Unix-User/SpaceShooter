@@ -73,7 +73,7 @@ jobs:
         if: matrix.needs_zip && success()
         run: |
           cd build/${{ matrix.platform }}
-          zip -r game-${{ matrix.platform }}.zip . -i "*"
+          zip -r game-${{ matrix.platform }}.zip game* ./*.dll ./*.pck ./*.so* ./*.x86_64
       
       - name: Upload Artifact
         if: success()
