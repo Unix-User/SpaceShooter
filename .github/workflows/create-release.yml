@@ -56,32 +56,24 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
-      - name: 🔑 Configure Android Keystore
+      - name: 🔑 Configure Android Debug Settings
         if: matrix.platform == 'android'
         run: |
-          if [ ! -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
-            {
-              echo "keystore/release=android.keystore"
-              echo "keystore/release_user=${{ secrets.ANDROID_KEYSTORE_USER }}"
-              echo "keystore/release_password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
-            } >> export_presets.cfg
-          else
-            # Create debug keystore
-            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-              -keypass android -keystore debug.keystore \
-              -storepass android -dname "CN=Android Debug,O=Android,C=US" \
-              -validity 9999 \
-              -deststoretype pkcs12
-            
-            # Configure debug keystore
-            {
-              echo "keystore/debug=debug.keystore"
-              echo "keystore/debug_user=androiddebugkey"
-              echo "keystore/debug_password=android"
-            } >> export_presets.cfg
-          fi
+          # Create debug keystore
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+            -keypass android -keystore debug.keystore \
+            -storepass android -dname "CN=Android Debug,O=Android,C=US" \
+            -validity 9999 \
+            -deststoretype pkcs12
           
+          # Configure debug keystore in export_presets.cfg
+          {
+            echo ""
+            echo "keystore/debug=debug.keystore"
+            echo "keystore/debug_user=androiddebugkey"
+            echo "keystore/debug_password=android"
+          } >> export_presets.cfg
+      
       - name: 📱 Setup Android SDK
         if: matrix.platform == 'android'
         run: |
@@ -119,7 +111,7 @@ jobs:
       - name: 🛠️ Build Game
         run: |
           mkdir -p build/${{ matrix.platform }}
-          if [ "${{ matrix.platform }}" = "android" ] && [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+          if [ "${{ matrix.platform }}" = "android" ]; then
             godot --headless --verbose --export-debug "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
           else
             godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
