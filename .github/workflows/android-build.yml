@@ -22,27 +22,14 @@ jobs:
           lfs: true
 
       - name: Build Android (Debug)
-        uses: croconut/godot-multi-builder@v1
-        id: build_android
+        uses: dulvui/godot-android-export@v4
         with:
-          names: "Android"
-          debug-mode: "true"
-          
-      - name: Unzip Build
-        run: |
-          unzip builds/builds.zip -d builds/android
+          godot-version: 4.2.2
+          working-directory: .
           
       - name: Upload Android Build
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-build
-          path: builds/android/
+          path: android/build/
           retention-days: 14
-
-      - name: Upload Build Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-build-log
-          path: ${{ steps.build_android.outputs.build_logs }}
-          retention-days: 3
