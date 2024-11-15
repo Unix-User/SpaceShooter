@@ -84,10 +84,11 @@ jobs:
             unzip
 
           # Configurar variáveis de ambiente
-          ANDROID_HOME=/usr/lib/android-sdk
-          CMDLINE_TOOLS_ROOT=$ANDROID_HOME/cmdline-tools
-          CMDLINE_TOOLS_LATEST=$CMDLINE_TOOLS_ROOT/latest
-          JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          export ANDROID_HOME=/usr/lib/android-sdk
+          export CMDLINE_TOOLS_ROOT=$ANDROID_HOME/cmdline-tools
+          export CMDLINE_TOOLS_LATEST=$CMDLINE_TOOLS_ROOT/latest
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          export PATH=$PATH:$CMDLINE_TOOLS_LATEST/bin:$JAVA_HOME/bin
 
           # Criar diretórios necessários
           mkdir -p $CMDLINE_TOOLS_ROOT
@@ -98,24 +99,43 @@ jobs:
           mv cmdline-tools $CMDLINE_TOOLS_LATEST
           rm commandlinetools-linux-*_latest.zip
           
-          # Configurar PATH
-          export PATH=$PATH:$CMDLINE_TOOLS_LATEST/bin:$JAVA_HOME/bin
-          
           # Instalar componentes do SDK
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager --install \
             "platform-tools" \
             "platforms;android-33" \
-            "build-tools;33.0.2" > /dev/null
+            "build-tools;33.0.2"
+
+          # Debug info
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "PATH=$PATH"
+          ls -la $ANDROID_HOME
+          ls -la $CMDLINE_TOOLS_LATEST
       
       - name: 🛠️ Build Game
         run: |
           mkdir -p build/${{ matrix.platform }}
+          
+          # Debug info
+          echo "Current directory: $(pwd)"
+          echo "Content of current directory:"
+          ls -la
+          echo "Content of export_presets.cfg:"
+          cat export_presets.cfg
+          
           if [ "${{ matrix.platform }}" = "android" ]; then
+            echo "Building Android debug APK..."
             godot --headless --verbose --export-debug "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+            
+            # Debug info after build
+            echo "Content of build directory:"
+            ls -la build/
+            echo "Content of android build directory:"
+            ls -la build/android/ || echo "Android build directory not found"
           else
             godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
           fi
+          
           if [ "${{ matrix.platform }}" = "linux" ]; then
             chmod ${{ matrix.permissions }} ${{ matrix.artifact_path }}
           fi
