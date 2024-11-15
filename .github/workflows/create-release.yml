@@ -19,25 +19,12 @@ jobs:
           - platform: android
             export_preset: "Android"
             artifact_path: build/android/game.apk
-            needs_zip: false
-            extra_setup: true
           - platform: windows
             export_preset: "Windows Desktop"
             artifact_path: build/windows/game.exe
-            needs_zip: true
-            extra_setup: false
-            artifact_name: "game-windows"
-            extra_files: "*.dll,*.pck"
-            compress_level: 9
           - platform: linux
             export_preset: "Linux/X11"
             artifact_path: build/linux/game.x86_64
-            needs_zip: true
-            extra_setup: false
-            artifact_name: "game-linux"
-            extra_files: "*.pck"
-            permissions: "755"
-            compress_level: 9
     
     name: 🔨 Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
@@ -56,111 +43,75 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
       
-      - name: 🔑 Configure Android Debug Settings
-        if: matrix.platform == 'android'
+      - name: 🔧 Platform Setup
         run: |
-          # Create debug keystore
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-            -keypass android -keystore debug.keystore \
-            -storepass android -dname "CN=Android Debug,O=Android,C=US" \
-            -validity 9999 \
-            -deststoretype pkcs12
+          # Criar diretórios de build
+          mkdir -p build/${{ matrix.platform }}
           
-          # Configure debug keystore in export_presets.cfg
-          {
-            echo ""
-            echo "keystore/debug=debug.keystore"
-            echo "keystore/debug_user=androiddebugkey"
-            echo "keystore/debug_password=android"
-          } >> export_presets.cfg
-      
-      - name: 📱 Setup Android SDK
-        if: matrix.platform == 'android'
-        run: |
-          # Instalar dependências necessárias
-          apt-get update && apt-get install -y --no-install-recommends \
-            openjdk-11-jdk-headless \
-            wget \
-            unzip
+          # Setup específico para Android
+          if [ "${{ matrix.platform }}" = "android" ]; then
+            # Criar keystore para debug
+            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+              -keypass android -keystore debug.keystore \
+              -storepass android -dname "CN=Android Debug,O=Android,C=US" \
+              -validity 9999 -deststoretype pkcs12
 
-          # Configurar variáveis de ambiente
-          export ANDROID_HOME=/usr/lib/android-sdk
-          export CMDLINE_TOOLS_ROOT=$ANDROID_HOME/cmdline-tools
-          export CMDLINE_TOOLS_LATEST=$CMDLINE_TOOLS_ROOT/latest
-          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-          export PATH=$PATH:$CMDLINE_TOOLS_LATEST/bin:$JAVA_HOME/bin
+            # Configurar keystore
+            echo "keystore/debug=debug.keystore" >> export_presets.cfg
+            echo "keystore/debug_user=androiddebugkey" >> export_presets.cfg
+            echo "keystore/debug_password=android" >> export_presets.cfg
 
-          # Criar diretórios necessários
-          mkdir -p $CMDLINE_TOOLS_ROOT
-          
-          # Download e instalação do SDK
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools-linux-*_latest.zip
-          mv cmdline-tools $CMDLINE_TOOLS_LATEST
-          rm commandlinetools-linux-*_latest.zip
-          
-          # Instalar componentes do SDK
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2"
+            # Setup Android SDK
+            apt-get update && apt-get install -y --no-install-recommends \
+              openjdk-11-jdk-headless wget unzip
 
-          # Debug info
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "PATH=$PATH"
-          ls -la $ANDROID_HOME
-          ls -la $CMDLINE_TOOLS_LATEST
+            export ANDROID_HOME=/usr/lib/android-sdk
+            export CMDLINE_TOOLS_ROOT=$ANDROID_HOME/cmdline-tools
+            export CMDLINE_TOOLS_LATEST=$CMDLINE_TOOLS_ROOT/latest
+            
+            mkdir -p $CMDLINE_TOOLS_ROOT
+            wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+            unzip -q commandlinetools-linux-*_latest.zip
+            mv cmdline-tools $CMDLINE_TOOLS_LATEST
+            rm commandlinetools-linux-*_latest.zip
+            
+            export PATH=$PATH:$CMDLINE_TOOLS_LATEST/bin
+            yes | sdkmanager --licenses > /dev/null 2>&1 || true
+            sdkmanager --install "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          fi
       
       - name: 🛠️ Build Game
         run: |
-          mkdir -p build/${{ matrix.platform }}
-          
-          # Debug info
-          echo "Current directory: $(pwd)"
-          echo "Content of current directory:"
-          ls -la
-          echo "Content of export_presets.cfg:"
-          cat export_presets.cfg
-          
-          if [ "${{ matrix.platform }}" = "android" ]; then
-            echo "Building Android debug APK..."
-            godot --headless --verbose --export-debug "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
-            
-            # Debug info after build
-            echo "Content of build directory:"
-            ls -la build/
-            echo "Content of android build directory:"
-            ls -la build/android/ || echo "Android build directory not found"
-          else
-            godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
-          fi
-          
-          if [ "${{ matrix.platform }}" = "linux" ]; then
-            chmod ${{ matrix.permissions }} ${{ matrix.artifact_path }}
-          fi
+          case "${{ matrix.platform }}" in
+            "android")
+              godot --headless --verbose --export-debug "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+              ;;
+            "windows"|"linux")
+              godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+              [ "${{ matrix.platform }}" = "linux" ] && chmod 755 ${{ matrix.artifact_path }}
+              ;;
+          esac
       
       - name: 📦 Package Build
-        if: matrix.needs_zip && success()
+        if: matrix.platform != 'android'
         run: |
           cd build/${{ matrix.platform }}
           case "${{ matrix.platform }}" in
             "windows")
-              find . -type f ! -name "game.exe" ! -name "*.dll" ! -name "*.pck" -delete
-              zip -${{ matrix.compress_level }} -r ${{ matrix.artifact_name }}.zip game.exe *.dll *.pck
+              zip -9 -r game-windows.zip game.exe *.dll *.pck
               ;;
             "linux")
-              find . -type f ! -name "game.x86_64" ! -name "*.pck" -delete
-              zip -${{ matrix.compress_level }} -r ${{ matrix.artifact_name }}.zip game.x86_64 *.pck
+              zip -9 -r game-linux.zip game.x86_64 *.pck
               ;;
           esac
       
       - name: ⬆️ Upload Build Artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-build
-          path: ${{ matrix.needs_zip && format('build/{0}/{1}.zip', matrix.platform, matrix.artifact_name) || matrix.artifact_path }}
+          path: |
+            ${{ matrix.platform == 'android' && matrix.artifact_path || 
+            format('build/{0}/game-{0}.zip', matrix.platform) }}
           retention-days: 7
 
   release:
@@ -205,9 +156,4 @@ jobs:
 
       - name: 🧹 Cleanup
         if: always()
-        run: |
-          rm -rf \
-            android.keystore \
-            ~/.local/share/godot \
-            ~/.config/godot \
-            2>/dev/null || true
+        run: rm -rf ~/.local/share/godot ~/.config/godot android.keystore 2>/dev/null || true
