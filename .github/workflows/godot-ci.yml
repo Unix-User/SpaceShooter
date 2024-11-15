@@ -31,11 +31,37 @@ jobs:
           mkdir -v -p build/web
           cd ${PROJECT_PATH}
           godot --headless --verbose --export-release "Web" build/web/index.html
-      - name: Create Headers
+      - name: Create Platform Configs
         run: |
-          echo "/*" > build/web/_headers
-          echo "  Cross-Origin-Embedder-Policy: require-corp" >> build/web/_headers
-          echo "  Cross-Origin-Opener-Policy: same-origin" >> build/web/_headers
+          # Create netlify.toml
+          cat > build/web/netlify.toml << 'EOL'
+          [[headers]]
+            for = "/*"
+            [headers.values]
+              Cross-Origin-Embedder-Policy = "require-corp"
+              Cross-Origin-Opener-Policy = "same-origin"
+          EOL
+
+          # Create vercel.json
+          cat > build/web/vercel.json << 'EOL'
+          {
+            "headers": [
+              {
+                "source": "/(.*)",
+                "headers": [
+                  {
+                    "key": "Cross-Origin-Embedder-Policy",
+                    "value": "require-corp"
+                  },
+                  {
+                    "key": "Cross-Origin-Opener-Policy",
+                    "value": "same-origin"
+                  }
+                ]
+              }
+            ]
+          }
+          EOL
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
