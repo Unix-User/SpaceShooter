@@ -59,12 +59,14 @@ jobs:
       - name: 🔑 Configure Android Keystore
         if: matrix.platform == 'android'
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
-          {
-            echo "keystore/release=android.keystore"
-            echo "keystore/release_user=${{ secrets.ANDROID_KEYSTORE_USER }}"
-            echo "keystore/release_password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
-          } >> export_presets.cfg
+          if [ ! -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+            {
+              echo "keystore/release=android.keystore"
+              echo "keystore/release_user=${{ secrets.ANDROID_KEYSTORE_USER }}"
+              echo "keystore/release_password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            } >> export_presets.cfg
+          fi
           
       - name: 📱 Setup Android SDK
         if: matrix.platform == 'android'
@@ -103,7 +105,11 @@ jobs:
       - name: 🛠️ Build Game
         run: |
           mkdir -p build/${{ matrix.platform }}
-          godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+          if [ "${{ matrix.platform }}" = "android" ] && [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            godot --headless --verbose --export-debug "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+          else
+            godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
+          fi
           if [ "${{ matrix.platform }}" = "linux" ]; then
             chmod ${{ matrix.permissions }} ${{ matrix.artifact_path }}
           fi
