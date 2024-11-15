@@ -33,12 +33,18 @@ jobs:
           lfs: true          # Suporte a Git LFS
           submodules: true   # Clona submódulos
 
-      # Configura o ambiente Godot
+      # Configura o ambiente Godot e .NET SDK
       - name: Setup
         run: |
           mkdir -v -p ~/.local/share/godot/templates/
           mv /root/.local/share/godot/templates/* ~/.local/share/godot/templates/ || true
           mkdir -v -p ~/.config/godot/
+          # Instala .NET SDK
+          wget https://dot.net/v1/dotnet-install.sh
+          chmod +x dotnet-install.sh
+          ./dotnet-install.sh --channel 6.0
+          export DOTNET_ROOT=$HOME/.dotnet
+          export PATH=$PATH:$DOTNET_ROOT
         continue-on-error: true
 
       # Processo de build para Android sem keystore
@@ -46,6 +52,8 @@ jobs:
         run: |
           mkdir -v -p build/android
           godot --headless --verbose --export-debug "Android" build/android/SpaceShooter.apk
+        env:
+          DOTNET_ROOT: ${{ env.HOME }}/.dotnet
 
       # Empacota o build Android com verificação
       - name: Package Build
