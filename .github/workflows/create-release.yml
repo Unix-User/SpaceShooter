@@ -12,7 +12,7 @@ permissions:
 jobs:
   build:
     strategy:
-      fail-fast: false  # Continue with other platforms if one fails
+      fail-fast: false
       matrix:
         platform: [android, windows, linux]
         include:
@@ -22,12 +22,12 @@ jobs:
             needs_zip: false
             extra_setup: true
           - platform: windows
-            export_preset: "Windows Desktop"
+            export_preset: "Windows"
             artifact_path: build/windows/game.exe
             needs_zip: true
             extra_setup: false
           - platform: linux
-            export_preset: "Linux/X11"
+            export_preset: "Linux"
             artifact_path: build/linux/game.x86_64
             needs_zip: true
             extra_setup: false
@@ -62,6 +62,7 @@ jobs:
             exit 1
           fi
           echo "Found export_presets.cfg"
+          cat export_presets.cfg | grep "name="
           
       - name: Build
         run: |
@@ -72,7 +73,7 @@ jobs:
         if: matrix.needs_zip && success()
         run: |
           cd build/${{ matrix.platform }}
-          zip -r game-${{ matrix.platform }}.zip ./*
+          zip -r game-${{ matrix.platform }}.zip . -i "*"
       
       - name: Upload Artifact
         if: success()
@@ -98,6 +99,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: builds
+          
+      - name: List Downloads
+        run: |
+          ls -R builds/
           
       - name: Verify Artifacts
         run: |
@@ -140,4 +145,4 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
