@@ -1,4 +1,4 @@
-name: Android Build
+name: Web Build
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build Android
+    name: Build Web
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.2.1
@@ -17,11 +17,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
-      
+          
       - name: Setup Export Templates
         run: |
           mkdir -p ~/.local/share/godot/export_templates
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+      
+      - name: Debug Export Presets
+        run: |
+          ls -la
+          cat export_presets.cfg || echo "export_presets.cfg not found!"
       
       - name: Cache Godot files
         uses: actions/cache@v3
@@ -35,12 +40,12 @@ jobs:
       
       - name: Build
         run: |
-          mkdir -p build/android
-          godot --headless --verbose --export-release "Android" build/android/game.apk
+          mkdir -p build/web
+          godot --headless --verbose --export-release "Web" build/web/index.html
           
-      - name: Upload Android Build
+      - name: Upload Web Build
         uses: actions/upload-artifact@v4
         with:
-          name: android-build
-          path: build/android/game.apk
+          name: web-build
+          path: build/web
           retention-days: 7

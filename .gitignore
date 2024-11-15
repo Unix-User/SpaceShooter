@@ -1,9 +1,29 @@
 # Godot 4+ specific ignores
 .godot/
-.vscode/
-*.cfg
-*.import
-*.tmp
-*.exe
+
+# Godot-specific ignores
+.import/
+export.cfg
+export_presets.cfg
+*.translation
+
+# Builds
+build/
+android/build/*
+web-build/
 *.apk
-*.idsig
+*.aab
+*.pck
+*.wasm
+*.js
+*.worker.js
+
+# Sistema específico
+.DS_Store
+Thumbs.db
+.directory
+
+# Logs e temporários
+*.log
+*.tmp
+*.temp
