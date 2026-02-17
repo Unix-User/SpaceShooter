@@ -67,13 +67,15 @@ jobs:
       - name: 📦 Install Android SDK components (Android only)
         if: matrix.platform == 'android'
         run: |
-          # Aceita licenças (necessário para instalar componentes)
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          # Instala platform-tools, plataforma 33 e build-tools 33.0.2
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2"
+          # Localiza o sdkmanager dentro do ANDROID_HOME
+          SDKMANAGER=$(find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null | head -1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found in $ANDROID_HOME"
+            exit 1
+          fi
+          echo "Found sdkmanager at: $SDKMANAGER"
+          # Instala os componentes necessários
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: 🔑 Generate debug keystore and configure preset (Android only)
         if: matrix.platform == 'android'
