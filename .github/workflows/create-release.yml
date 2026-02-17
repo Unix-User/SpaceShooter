@@ -86,10 +86,17 @@ jobs:
             -storepass android -dname "CN=Android Debug,O=Android,C=US" \
             -validity 9999 -deststoretype pkcs12
 
-          # Ajusta o preset 0 (Android) no export_presets.cfg
+          # Configura linhas de DEBUG (já existentes)
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
+
+          # Agora configura as linhas de RELEASE com os mesmos valores
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release=.*|keystore/release="res://android.keystore"|' export_presets.cfg
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_user=.*|keystore/release_user="androiddebugkey"|' export_presets.cfg
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_password=.*|keystore/release_password="android"|' export_presets.cfg
+
+          # Caminho do SDK (já existente)
           sed -i '/^\[preset\.0\]/,/^\[/ s|^android_sdk_path=.*|android_sdk_path="'"$ANDROID_HOME"'"|' export_presets.cfg
 
       # ========== EXPORTAÇÃO ==========
