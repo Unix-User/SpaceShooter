@@ -85,20 +85,27 @@ jobs:
             -keypass android -keystore android.keystore \
             -storepass android -dname "CN=Android Debug,O=Android,C=US" \
             -validity 9999 -deststoretype pkcs12
-
-          # Configura linhas de DEBUG (já existentes)
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
-
-          # Agora configura as linhas de RELEASE com os mesmos valores
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release=.*|keystore/release="res://android.keystore"|' export_presets.cfg
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_user=.*|keystore/release_user="androiddebugkey"|' export_presets.cfg
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_password=.*|keystore/release_password="android"|' export_presets.cfg
-
-          # Caminho do SDK (já existente)
-          sed -i '/^\[preset\.0\]/,/^\[/ s|^android_sdk_path=.*|android_sdk_path="'"$ANDROID_HOME"'"|' export_presets.cfg
-
+      
+          # Encontra o bloco do preset Android (procura pela linha que contém "name=\"Android\"")
+          PRESET_BLOCK=$(grep -n "name=\"Android\"" export_presets.cfg | cut -d: -f1)
+          if [ -z "$PRESET_BLOCK" ]; then
+            echo "::error::Preset Android não encontrado no export_presets.cfg"
+            exit 1
+          fi
+          # O número da linha do início do bloco é PRESET_BLOCK-1 (linha anterior)
+          START_LINE=$((PRESET_BLOCK - 1))
+      
+          # Agora substituímos ou adicionamos as linhas dentro desse bloco
+          # Vamos usar um script sed que age apenas entre START_LINE e a próxima linha em branco ou início de outro preset
+          sed -i "${START_LINE},/^\[/ {
+            s|^keystore/debug=.*|keystore/debug=\"res://android.keystore\"|
+            s|^keystore/debug_user=.*|keystore/debug_user=\"androiddebugkey\"|
+            s|^keystore/debug_password=.*|keystore/debug_password=\"android\"|
+            s|^keystore/release=.*|keystore/release=\"res://android.keystore\"|
+            s|^keystore/release_user=.*|keystore/release_user=\"androiddebugkey\"|
+            s|^keystore/release_password=.*|keystore/release_password=\"android\"|
+            s|^android_sdk_path=.*|android_sdk_path=\"$ANDROID_HOME\"|
+          }" export_presets.cfg
       # ========== EXPORTAÇÃO ==========
       - name: 🛠️ Export game
         run: |
