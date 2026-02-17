@@ -31,7 +31,7 @@ jobs:
     name: 🔨 Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.6.1   # Ajuste para sua versão do Godot
+      image: barichello/godot-ci:4.6.1   # Use a versão exata do seu Godot
       options: --user root
 
     steps:
@@ -41,7 +41,7 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      # Configuração específica para Android (Java + SDK)
+      # Configuração específica para Android
       - name: ☕ Setup Java 17 (Android only)
         if: matrix.platform == 'android'
         uses: actions/setup-java@v4
@@ -62,14 +62,14 @@ jobs:
             -validity 9999 -deststoretype pkcs12
 
           # Atualiza o export_presets.cfg para usar o keystore gerado
-          # Ajuste o índice do preset se necessário (aqui assume preset.0)
+          # Ajuste o índice do preset (preset.0) conforme necessário
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
 
       # Cria diretório de saída
       - name: 📁 Create output directory
-        run: mkdir -p $(dirname ${{ matrix.artifact_path }})
+        run: mkdir -p build/${{ matrix.platform }}
 
       # Exporta o jogo
       - name: 🛠️ Export game
@@ -80,9 +80,7 @@ jobs:
       - name: 📦 Package Windows/Linux builds
         if: matrix.platform != 'android'
         run: |
-          cd $(dirname ${{ matrix.artifact_path }})
-          # Remove o arquivo .exe ou .x86_64 do zip se quiser apenas o executável e a pasta .pck
-          # Mas aqui vamos zipar tudo no diretório (pode incluir arquivos .import, etc.)
+          cd build/${{ matrix.platform }}
           zip -9 -r ${{ matrix.artifact_name }} *
 
       # Upload do artefato
@@ -91,7 +89,7 @@ jobs:
         with:
           name: ${{ matrix.platform }}-build
           path: |
-            ${{ matrix.platform == 'android' && matrix.artifact_path || format('{0}/{1}', dirname(matrix.artifact_path), matrix.artifact_name) }}
+            ${{ matrix.platform == 'android' && 'build/android/game.apk' || format('build/{0}/{1}', matrix.platform, matrix.artifact_name) }}
           retention-days: 7
 
   release:
