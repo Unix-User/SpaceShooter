@@ -11,7 +11,7 @@ jobs:
     name: Build Web
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.2.1
+      image: barichello/godot-ci:latest
     
     steps:
       - uses: actions/checkout@v4

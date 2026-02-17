@@ -30,7 +30,7 @@ jobs:
     name: 🔨 Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.2
+      image: barichello/godot-ci:latest
       options: --user root
     
     steps:
