@@ -44,11 +44,11 @@ jobs:
         run: |
           mkdir -p ~/.local/share/godot/export_templates/
           mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
-          
+
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libfontconfig1
+          apt-get update
+          apt-get install -y libfontconfig1
           mkdir -p build/android
 
       - name: 🔧 Platform Setup
