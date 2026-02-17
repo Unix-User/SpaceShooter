@@ -1,13 +1,14 @@
-[gd_scene load_steps=10 format=3 uid="uid://ca62b4vebssnp"]
+[gd_scene format=3 uid="uid://ca62b4vebssnp"]
 
-[ext_resource type="Texture2D" uid="uid://uxiyl2itnjij" path="res://assets/Backgrounds/purple.png" id="1_4ywf1"]
-[ext_resource type="Script" path="res://World.gd" id="1_jvenn"]
+[ext_resource type="Texture2D" uid="uid://d1ptmf2oqv3r3" path="res://assets/Backgrounds/purple.png" id="1_4ywf1"]
+[ext_resource type="Script" uid="uid://d2jdinmuoaf1m" path="res://scripts/World.gd" id="1_jvenn"]
 [ext_resource type="PackedScene" uid="uid://cvmnjm7irvic4" path="res://characters/player/player.tscn" id="2_hsy1p"]
 [ext_resource type="PackedScene" uid="uid://8a82lvcxfwie" path="res://control.tscn" id="2_jinrv"]
 [ext_resource type="PackedScene" uid="uid://c6e4edwlwajns" path="res://game_over_screen.tscn" id="3_d0tut"]
-[ext_resource type="PackedScene" uid="uid://cm381fkcaok4b" path="res://characters/enemy/Enemy_spawner.tscn" id="3_esbgo"]
-[ext_resource type="Texture2D" uid="uid://cm3iloq4w0ewr" path="res://assets/Effects/star1.png" id="4_dwox6"]
+[ext_resource type="PackedScene" uid="uid://cm381fkcaok4b" path="res://characters/enemy/enemy_spawner.tscn" id="3_esbgo"]
+[ext_resource type="Texture2D" uid="uid://b7knryvtdhcy8" path="res://assets/Effects/star1.png" id="4_dwox6"]
 [ext_resource type="PackedScene" uid="uid://bulr8q8t27ogq" path="res://virtual_joystick2.tscn" id="8_656ck"]
+[ext_resource type="AudioStream" uid="uid://dqcl0yj3wx6k6" path="res://assets/Audio/SFX/PlayerShoot.wav" id="9_ioo17"]
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_264jw"]
 particle_flag_disable_z = true
@@ -19,57 +20,67 @@ initial_velocity_min = -1000.0
 initial_velocity_max = -1000.0
 gravity = Vector3(0, 0, 0)
 
-[node name="World" type="Node2D"]
+[node name="World" type="Node2D" unique_id=922634352]
 script = ExtResource("1_jvenn")
 
-[node name="Player" parent="." groups=["world"] instance=ExtResource("2_hsy1p")]
+[node name="Player" parent="." unique_id=564636972 groups=["world"] instance=ExtResource("2_hsy1p")]
 light_mask = 2
 visibility_layer = 21
 position = Vector2(256, 896)
 
-[node name="EnemySpawner" parent="." instance=ExtResource("3_esbgo")]
+[node name="EnemySpawner" parent="." unique_id=863010930 instance=ExtResource("3_esbgo")]
 
-[node name="StarParticleEffect" type="GPUParticles2D" parent="."]
+[node name="StarParticleEffect" type="GPUParticles2D" parent="." unique_id=829608743]
 visible = false
 position = Vector2(270, -50)
-process_material = SubResource("ParticleProcessMaterial_264jw")
 texture = ExtResource("4_dwox6")
 lifetime = 1.25
 preprocess = 5.0
+process_material = SubResource("ParticleProcessMaterial_264jw")
 
-[node name="CPUParticles2D" type="CPUParticles2D" parent="."]
+[node name="CPUParticles2D" type="CPUParticles2D" parent="." unique_id=1711087397]
 position = Vector2(270, -50)
 amount = 4
+texture = ExtResource("4_dwox6")
 lifetime = 1.25
 preprocess = 5.0
-texture = ExtResource("4_dwox6")
 emission_shape = 3
 emission_rect_extents = Vector2(270, 1)
 
-[node name="ParallaxBackground" type="ParallaxBackground" parent="."]
+[node name="ParallaxBackground" type="ParallaxBackground" parent="." unique_id=284733179]
 
-[node name="ParallaxLayer" type="ParallaxLayer" parent="ParallaxBackground"]
+[node name="ParallaxLayer" type="ParallaxLayer" parent="ParallaxBackground" unique_id=1125321451]
 motion_mirroring = Vector2(0, 960)
 
-[node name="Bg" type="Sprite2D" parent="ParallaxBackground/ParallaxLayer"]
+[node name="Bg" type="Sprite2D" parent="ParallaxBackground/ParallaxLayer" unique_id=322264114]
 texture_repeat = 2
 texture = ExtResource("1_4ywf1")
 centered = false
 region_enabled = true
 region_rect = Rect2(0, 0, 540, 960)
 
-[node name="UiLayer" type="CanvasLayer" parent="."]
+[node name="UiLayer" type="CanvasLayer" parent="." unique_id=1495441505]
 
-[node name="Control" parent="UiLayer" instance=ExtResource("2_jinrv")]
+[node name="Control" parent="UiLayer" unique_id=322625330 instance=ExtResource("2_jinrv")]
 
-[node name="GameOverScreen" parent="UiLayer" instance=ExtResource("3_d0tut")]
+[node name="HealthLabel" type="Label" parent="UiLayer/Control" unique_id=707477489]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="GameOverScreen" parent="UiLayer" unique_id=1581175676 instance=ExtResource("3_d0tut")]
 visible = false
 
-[node name="Virtual Joystick" parent="UiLayer" instance=ExtResource("8_656ck")]
+[node name="Virtual Joystick" parent="UiLayer" unique_id=1770401565 instance=ExtResource("8_656ck")]
 action_up = "move_up"
 action_down = "move_down"
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1053928276]
 position = Vector2(267, 479)
+
+[node name="LaserSound" type="AudioStreamPlayer" parent="." unique_id=731811803]
+stream = ExtResource("9_ioo17")
+
+[node name="SpawnTimer" type="Timer" parent="." unique_id=1087416482]
 
 [connection signal="spawn_laser" from="Player" to="." method="_on_player_spawn_laser"]
