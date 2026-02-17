@@ -1,4 +1,4 @@
-name: Create Release
+name: Build and Release
 
 on:
   push:
@@ -7,174 +7,124 @@ on:
 
 permissions:
   contents: write
-  discussions: write
 
 jobs:
   build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         platform: [android, windows, linux]
         include:
           - platform: android
-            export_preset: "Android"
-            artifact_path: build/android/game.apk
+            preset: "Android"
+            output: build/android/game.apk
+            artifact_name: android-game.apk
           - platform: windows
-            export_preset: "Windows Desktop"
-            artifact_path: build/windows/game.exe
-            godot_export_type: --export-release
+            preset: "Windows Desktop"
+            output: build/windows/game.exe
+            artifact_name: windows-game.zip
           - platform: linux
-            export_preset: "Linux/X11"
-            artifact_path: build/linux/game.x86_64
-    
-    name: 🔨 Build ${{ matrix.platform }}
-    runs-on: ubuntu-latest
+            preset: "Linux/X11"
+            output: build/linux/game.x86_64
+            artifact_name: linux-game.zip
+
     container:
-      image: barichello/godot-ci:latest
+      image: barichello/godot-ci:4.6.1   # Ajuste a tag conforme sua versão do Godot
       options: --user root
-    
+
     steps:
-      - name: 📥 Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           lfs: true
           fetch-depth: 0
-          
-      - name: 🎮 Setup Godot Export Templates
+
+      # Configuração específica para Android
+      - name: Setup Java (Android only)
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK (Android only)
+        if: matrix.platform == 'android'
+        uses: android-actions/setup-android@v3
+
+      - name: Generate debug keystore (Android only)
+        if: matrix.platform == 'android'
         run: |
-          mkdir -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+            -keypass android -keystore android.keystore \
+            -storepass android -dname "CN=Android Debug,O=Android,C=US" \
+            -validity 9999 -deststoretype pkcs12
+          # Atualiza o export_presets.cfg para usar o keystore gerado
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
 
-      - name: Install dependencies
+      # Cria diretório de saída
+      - name: Create output directory
+        run: mkdir -p $(dirname ${{ matrix.output }})
+
+      # Exporta o jogo
+      - name: Export game
         run: |
-          apt-get update
-          apt-get install -y libfontconfig1
-          mkdir -p build/android
+          godot --headless --verbose --export-release "${{ matrix.preset }}" ${{ matrix.output }}
 
-      - name: 🔧 Platform Setup
-        run: |
-          # Criar diretórios de build
-          mkdir -p build/${{ matrix.platform }}
-          
-          # Setup específico para Android
-          if [ "${{ matrix.platform }}" = "android" ]; then
-            # Criar keystore para debug
-            keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-              -keypass android -keystore android.keystore \
-              -storepass android -dname "CN=Android Debug,O=Android,C=US" \
-              -validity 9999 -deststoretype pkcs12
-
-            # Configurar keystore no export_presets.cfg
-            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
-            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
-            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
-            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release=.*|keystore/release="res://android.keystore"|' export_presets.cfg
-            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_user=.*|keystore/release_user="androiddebugkey"|' export_presets.cfg
-            sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/release_password=.*|keystore/release_password="android"|' export_presets.cfg
-
-            # Setup Android SDK
-            apt-get update && apt-get install -y --no-install-recommends \
-              openjdk-11-jdk-headless wget unzip
-
-            export ANDROID_HOME=/usr/lib/android-sdk
-            export CMDLINE_TOOLS_ROOT=$ANDROID_HOME/cmdline-tools
-            export CMDLINE_TOOLS_LATEST=$CMDLINE_TOOLS_ROOT/latest
-            
-            mkdir -p $CMDLINE_TOOLS_ROOT
-            wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-            unzip -q commandlinetools-linux-*_latest.zip
-            mv cmdline-tools $CMDLINE_TOOLS_LATEST
-            rm commandlinetools-linux-*_latest.zip
-            
-            export PATH=$PATH:$CMDLINE_TOOLS_LATEST/bin
-            yes | sdkmanager --licenses > /dev/null 2>&1 || true
-            sdkmanager --install "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-          fi
-      
-      - name: 🛠️ Build Game
-        run: |
-          case "${{ matrix.platform }}" in
-            "android")
-              godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
-              ;;
-            "windows")
-              mkdir -p "$(dirname ${{ matrix.artifact_path }})"
-              godot --headless --verbose ${{ matrix.godot_export_type }} "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
-              ;;
-            "linux")
-              godot --headless --verbose --export-release "${{ matrix.export_preset }}" ${{ matrix.artifact_path }}
-              [ "${{ matrix.platform }}" = "linux" ] && chmod 755 ${{ matrix.artifact_path }}
-              ;;
-          esac
-      
-      - name: 📦 Package Build
+      # Empacota Windows e Linux em ZIP (Android já é um .apk)
+      - name: Package Windows/Linux builds
         if: matrix.platform != 'android'
         run: |
-          cd build/${{ matrix.platform }}
-          case "${{ matrix.platform }}" in
-            "windows")
-              ls -la
-              if [ -f "game.exe" ]; then
-                zip -9 -r game-windows.zip game.exe *.dll *.pck || echo "Warning: Some files might be missing"
-              else
-                echo "Error: game.exe not found"
-                exit 1
-              fi
-              ;;
-            "linux")
-              zip -9 -r game-linux.zip game.x86_64 *.pck
-              ;;
-          esac
-      
-      - name: ⬆️ Upload Build Artifact
+          cd $(dirname ${{ matrix.output }})
+          zip -r ${{ matrix.artifact_name }} *
+
+      # Upload do artefato
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-build
           path: |
-            ${{ matrix.platform == 'android' && matrix.artifact_path || 
-            format('build/{0}/game-{0}.zip', matrix.platform) }}
+            ${{ matrix.platform == 'android' && matrix.output || format('{0}/{1}', dirname(matrix.output), matrix.artifact_name) }}
           retention-days: 7
 
   release:
-    name: 🚀 Create Release
+    name: Create Release
     runs-on: ubuntu-latest
     needs: build
     if: success()
-    
     steps:
-      - name: 📥 Download Build Artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: builds
-          
-      - name: 📝 Generate Release Notes
+
+      - name: Prepare release notes
         run: |
           cat > CHANGELOG.md << EOL
           ## 📥 Downloads
-          * 📱 Android: game.apk
-          * 🖥️ Windows: game-windows.zip
-          * 🐧 Linux: game-linux.zip
 
-          ## 📝 Notas da Versão
-          ### ✨ Novidades
+          - 📱 **Android**: [game.apk](./android-build/game.apk)
+          - 🖥️ **Windows**: [game-windows.zip](./windows-build/windows-game.zip)
+          - 🐧 **Linux**: [game-linux.zip](./linux-build/linux-game.zip)
+
+          ## 📝 Notas da versão ${{ github.ref_name }}
+
+          *Esta release foi gerada automaticamente pelo GitHub Actions.*
           EOL
-          
-      - name: 🎉 Publish Release
+
+      - name: Publish Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             builds/android-build/game.apk
-            builds/windows-build/game-windows.zip
-            builds/linux-build/game-linux.zip
-          name: "🎮 Game Release ${{ github.ref_name }}"
+            builds/windows-build/windows-game.zip
+            builds/linux-build/linux-game.zip
+          name: 🎮 Game Release ${{ github.ref_name }}
           body_path: CHANGELOG.md
           draft: false
           prerelease: false
-          generate_release_notes: true
-          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🧹 Cleanup
-        if: always()
-        run: rm -rf ~/.local/share/godot ~/.config/godot android.keystore 2>/dev/null || true
