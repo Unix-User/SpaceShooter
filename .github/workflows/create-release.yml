@@ -109,7 +109,7 @@ jobs:
       # ========== EXPORTAÇÃO ==========
       - name: 🛠️ Export game
         run: |
-          godot --headless --verbose --export-release "${{ matrix.preset }}" ${{ matrix.artifact_path }}
+          godot --headless --verbose --export-debug "${{ matrix.preset }}" ${{ matrix.artifact_path }}
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}   # Garante que o Godot veja a variável
 
