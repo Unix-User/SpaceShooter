@@ -24,16 +24,16 @@ Você pode baixar a versão mais recente do jogo para as seguintes plataformas:
 
 Este projeto é desenvolvido usando:
 
-- Godot Engine 4.2
+- Godot Engine 4.6
 - GDScript
 - Laravel v10.46.0 (API)
 - PHP v8.2.22 (Backend)
 
 ### Pré-requisitos
 
-- Godot Engine 4.2 ou superior
+- Godot Engine 4.6 ou superior
 - Android SDK (para builds Android)
-- Export Templates do Godot 4.2
+- Export Templates do Godot 4.6
 
 ## ✨ Recursos
 
