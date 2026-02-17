@@ -31,7 +31,7 @@ jobs:
     name: 🔨 Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     container:
-      image: barichello/godot-ci:4.6.1   # Use a versão exata do seu Godot
+      image: barichello/godot-ci:4.6.1
       options: --user root
 
     steps:
@@ -41,7 +41,18 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      # Configuração específica para Android
+      # ========== CONFIGURAÇÃO GERAL ==========
+      - name: 📁 Create output directory
+        run: mkdir -p build/${{ matrix.platform }}
+
+      - name: 🎮 Setup Godot Export Templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/
+          if [ -d /root/.local/share/godot/export_templates ]; then
+            cp -r /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/
+          fi
+
+      # ========== CONFIGURAÇÃO ESPECÍFICA PARA ANDROID ==========
       - name: ☕ Setup Java 17 (Android only)
         if: matrix.platform == 'android'
         uses: actions/setup-java@v4
@@ -53,37 +64,47 @@ jobs:
         if: matrix.platform == 'android'
         uses: android-actions/setup-android@v3
 
-      - name: 🔑 Generate debug keystore (Android only)
+      - name: 📦 Install Android SDK components (Android only)
         if: matrix.platform == 'android'
         run: |
+          # Aceita licenças (necessário para instalar componentes)
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          # Instala platform-tools, plataforma 33 e build-tools 33.0.2
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
+
+      - name: 🔑 Generate debug keystore and configure preset (Android only)
+        if: matrix.platform == 'android'
+        run: |
+          # Gera keystore
           keytool -keyalg RSA -genkeypair -alias androiddebugkey \
             -keypass android -keystore android.keystore \
             -storepass android -dname "CN=Android Debug,O=Android,C=US" \
             -validity 9999 -deststoretype pkcs12
 
-          # Atualiza o export_presets.cfg para usar o keystore gerado
-          # Ajuste o índice do preset (preset.0) conforme necessário
+          # Ajusta o preset 0 (Android) no export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug=.*|keystore/debug="res://android.keystore"|' export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_user=.*|keystore/debug_user="androiddebugkey"|' export_presets.cfg
           sed -i '/^\[preset\.0\]/,/^\[/ s|^keystore/debug_password=.*|keystore/debug_password="android"|' export_presets.cfg
+          sed -i '/^\[preset\.0\]/,/^\[/ s|^android_sdk_path=.*|android_sdk_path="'"$ANDROID_HOME"'"|' export_presets.cfg
 
-      # Cria diretório de saída
-      - name: 📁 Create output directory
-        run: mkdir -p build/${{ matrix.platform }}
-
-      # Exporta o jogo
+      # ========== EXPORTAÇÃO ==========
       - name: 🛠️ Export game
         run: |
           godot --headless --verbose --export-release "${{ matrix.preset }}" ${{ matrix.artifact_path }}
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}   # Garante que o Godot veja a variável
 
-      # Empacota Windows e Linux em ZIP (Android já é .apk)
+      # ========== EMPACOTAMENTO (exceto Android) ==========
       - name: 📦 Package Windows/Linux builds
         if: matrix.platform != 'android'
         run: |
           cd build/${{ matrix.platform }}
           zip -9 -r ${{ matrix.artifact_name }} *
 
-      # Upload do artefato
+      # ========== UPLOAD DO ARTEFATO ==========
       - name: ⬆️ Upload artifact
         uses: actions/upload-artifact@v4
         with:
